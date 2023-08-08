@@ -72,4 +72,7 @@ def gen_setup(program: str):
         'timeout': 30,
         'mappath': {'/': '/vnc_lite.html'},
         'new_browser_window': True,
+        'launcher_entry': {
+            'icon_path': (HERE / f'share/icons/{program}.svg').as_posix(),
+        }
     }
