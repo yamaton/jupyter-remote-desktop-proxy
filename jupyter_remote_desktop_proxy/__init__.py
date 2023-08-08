@@ -1,35 +1,47 @@
 import os
+import pathlib
 import shlex
 import tempfile
 from shutil import which
 
-HERE = os.path.dirname(os.path.abspath(__file__))
+HERE = pathlib.Path(__file__).parent.absolute()
+
+def setup_bandage():
+    return gen_setup('bandage')
+
+def setup_igv():
+    return gen_setup('igv')
 
 
-def setup_desktop():
+def gen_setup(program: str):
     # make a secure temporary directory for sockets
     # This is only readable, writeable & searchable by our uid
-    sockets_dir = tempfile.mkdtemp()
+    sockets_dir = tempfile.mkdtemp(prefix=program)
     sockets_path = os.path.join(sockets_dir, 'vnc-socket')
-    vncserver = which('vncserver')
 
-    if vncserver is None:
+    if (vnc_path := which('vncserver')):
         # Use bundled tigervnc
-        vncserver = os.path.join(HERE, 'share/tigervnc/bin/vncserver')
+        vncserver = pathlib.Path(vnc_path)
+    else:
+        vncserver = HERE / 'share/tigervnc/bin/vncserver'
+
 
     # TigerVNC provides the option to connect a Unix socket. TurboVNC does not.
     # TurboVNC and TigerVNC share the same origin and both use a Perl script
     # as the executable vncserver. We can determine if vncserver is TigerVNC
     # by searching TigerVNC string in the Perl script.
-    with open(vncserver) as vncserver_file:
+    with vncserver.open() as vncserver_file:
         is_tigervnc = "TigerVNC" in vncserver_file.read()
 
     if is_tigervnc:
-        vnc_args = [vncserver, '-rfbunixpath', sockets_path]
+        vnc_args = [vncserver.as_posix(), '-rfbunixpath', sockets_path]
         socket_args = ['--unix-target', sockets_path]
     else:
-        vnc_args = [vncserver]
+        vnc_args = [vncserver.as_posix()]
         socket_args = []
+
+    xstartup_file = HERE / f'share/{program}'
+    assert xstartup_file.exists()
 
     vnc_command = ' '.join(
         shlex.quote(p)
@@ -38,7 +50,7 @@ def setup_desktop():
             + [
                 '-verbose',
                 '-xstartup',
-                os.path.join(HERE, 'share/xstartup'),
+                xstartup_file.as_posix(),
                 '-SecurityTypes',
                 'None',
                 '-fg',
@@ -50,7 +62,7 @@ def setup_desktop():
             'websockify',
             '-v',
             '--web',
-            os.path.join(HERE, 'share/web/noVNC-1.2.0'),
+            (HERE / 'share/web/noVNC-1.2.0').as_posix(),
             '--heartbeat',
             '30',
             '{port}',

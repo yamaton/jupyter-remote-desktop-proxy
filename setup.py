@@ -21,7 +21,8 @@ setup(
     description="Run a desktop environments on Jupyter",
     entry_points={
         'jupyter_serverproxy_servers': [
-            'desktop = jupyter_remote_desktop_proxy:setup_desktop',
+            'bandage = jupyter_remote_desktop_proxy:setup_bandage',
+            'igv = jupyter_remote_desktop_proxy:setup_igv',
         ]
     },
     install_requires=[
